@@ -1,0 +1,56 @@
+# Python
+#################################
+# Môi trường ảo
+venv/
+.venv/
+env/
+.env/
+
+# Byte-code và file cache được biên dịch
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Thư mục build và phân phối
+/build/
+/dist/
+
+# Thư mục tải xuống của pip
+/pip_downloads/
+*.egg-info/
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+.tox/
+htmlcov/
+pytestdebug.log
+
+
+# Dự án AI / Machine Learning
+#################################
+# Dữ liệu cache của deepface
+# Thư mục này chứa các model đã được tải về, rất nặng và không nên đưa lên Git
+.deepface/
+
+# Dữ liệu do AI tạo ra (trừ file bạn tự điền)
+# Chúng ta sẽ bỏ qua embeddings.json vì nó có thể được tạo lại bằng enroll.py
+data/embeddings.json
+
+# Cân nhắc: bỏ qua thư mục ảnh nếu bạn không muốn lưu ảnh lên Git
+# Bỏ comment dòng dưới nếu thư mục ảnh của bạn quá lớn
+# data/known_faces/
+
+
+# IDE / Editor specific
+#################################
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
+# OS specific
+#################################
+.DS_Store
+Thumbs.db

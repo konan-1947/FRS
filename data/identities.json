@@ -1,0 +1,20 @@
+[
+    {
+        "id": "person_001",
+        "name": "Elon Musk",
+        "image_file": "elon_musk.png",
+        "extra_info": "CEO of Tesla, SpaceX"
+    },
+    {
+        "id": "person_002",
+        "name": "Konan",
+        "image_file": "konan.png",
+        "extra_info": "Konan"
+    },
+    {
+        "id": "person_003",
+        "name": "dương",
+        "image_file": "person_003.jpg",
+        "extra_info": "anh Dương"
+    }
+]
