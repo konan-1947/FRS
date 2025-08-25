@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Face Detection System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="display-5 mb-4">
+                <i class="fas fa-tachometer-alt"></i> System Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 id="total-faces">0</h4>
+                            <p class="card-text">Faces Detected</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 id="authorized-count">0</h4>
+                            <p class="card-text">Authorized</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 id="unauthorized-count">0</h4>
+                            <p class="card-text">Unauthorized</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 id="system-status">Stopped</h4>
+                            <p class="card-text">System Status</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-power-off fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Real-time Detection Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Face ID</th>
+                                    <th>Confidence</th>
+                                    <th>Status</th>
+                                    <th>Position</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detection-results">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No active detection</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-area"></i> System Performance</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="performanceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> System Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button id="start-detection" class="btn btn-success">
+                            <i class="fas fa-play"></i> Start Detection
+                        </button>
+                        <button id="stop-detection" class="btn btn-danger" disabled>
+                            <i class="fas fa-stop"></i> Stop Detection
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-info">
+                            <i class="fas fa-video"></i> View Live Feed
+                        </a>
+                        <button id="clear-data" class="btn btn-warning">
+                            <i class="fas fa-trash"></i> Clear Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> System Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Model:</strong> MTCNN + OpenCV</li>
+                        <li><strong>Resolution:</strong> 640x480</li>
+                        <li><strong>FPS:</strong> ~30</li>
+                        <li><strong>Processing:</strong> Real-time</li>
+                        <li><strong>Features:</strong> Face Detection, Recognition</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-clock"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div id="activity-log" style="max-height: 200px; overflow-y: auto;">
+                        <p class="text-muted">No recent activity</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('start-detection');
+    const stopBtn = document.getElementById('stop-detection');
+    const clearBtn = document.getElementById('clear-data');
+    const totalFaces = document.getElementById('total-faces');
+    const authorizedCount = document.getElementById('authorized-count');
+    const unauthorizedCount = document.getElementById('unauthorized-count');
+    const systemStatus = document.getElementById('system-status');
+    const detectionResults = document.getElementById('detection-results');
+    const activityLog = document.getElementById('activity-log');
+
+    let updateInterval;
+    let performanceData = [];
+    let performanceChart;
+
+    // Initialize performance chart
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Faces Detected',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10
+                }
+            }
+        }
+    });
+
+    function addActivityLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `alert alert-${type} py-1 px-2 mb-1`;
+        logEntry.innerHTML = `<small>${timestamp}: ${message}</small>`;
+        
+        if (activityLog.children.length === 0 || activityLog.children[0].textContent.includes('No recent activity')) {
+            activityLog.innerHTML = '';
+        }
+        
+        activityLog.insertBefore(logEntry, activityLog.firstChild);
+        
+        // Keep only last 10 entries
+        while (activityLog.children.length > 10) {
+            activityLog.removeChild(activityLog.lastChild);
+        }
+    }
+
+    function updateDashboard() {
+        fetch('/detection_status')
+            .then(response => response.json())
+            .then(data => {
+                // Update counters
+                totalFaces.textContent = data.faces_detected;
+                
+                let authorized = 0;
+                let unauthorized = 0;
+                
+                data.faces.forEach(face => {
+                    if (face.authorized) {
+                        authorized++;
+                    } else {
+                        unauthorized++;
+                    }
+                });
+                
+                authorizedCount.textContent = authorized;
+                unauthorizedCount.textContent = unauthorized;
+                systemStatus.textContent = data.active ? 'Running' : 'Stopped';
+                
+                // Update detection results table
+                if (data.faces.length > 0) {
+                    let tableHTML = '';
+                    data.faces.forEach(face => {
+                        const statusBadge = face.authorized ? 
+                            '<span class="badge bg-success">Authorized</span>' : 
+                            '<span class="badge bg-danger">Unauthorized</span>';
+                        
+                        tableHTML += `
+                            <tr>
+                                <td>Face ${face.id}</td>
+                                <td>${face.confidence.toFixed(3)}</td>
+                                <td>${statusBadge}</td>
+                                <td>${face.box[0]}, ${face.box[1]}</td>
+                                <td>${new Date().toLocaleTimeString()}</td>
+                            </tr>
+                        `;
+                    });
+                    detectionResults.innerHTML = tableHTML;
+                } else if (data.active) {
+                    detectionResults.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No faces detected</td></tr>';
+                } else {
+                    detectionResults.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No active detection</td></tr>';
+                }
+                
+                // Update performance chart
+                const now = new Date().toLocaleTimeString();
+                if (performanceChart.data.labels.length >= 20) {
+                    performanceChart.data.labels.shift();
+                    performanceChart.data.datasets[0].data.shift();
+                }
+                
+                performanceChart.data.labels.push(now);
+                performanceChart.data.datasets[0].data.push(data.faces_detected);
+                performanceChart.update('none');
+                
+                // Log significant events
+                if (authorized > 0 && unauthorized === 0) {
+                    // All faces are authorized - good
+                } else if (unauthorized > 0) {
+                    addActivityLog(`⚠️ ${unauthorized} unauthorized face(s) detected`, 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching dashboard data:', error);
+            });
+    }
+
+    startBtn.addEventListener('click', function() {
+        fetch('/start_detection')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    updateInterval = setInterval(updateDashboard, 1000);
+                    addActivityLog('✅ Detection system started', 'success');
+                } else {
+                    addActivityLog('❌ Failed to start detection', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addActivityLog('❌ Error starting detection', 'danger');
+            });
+    });
+
+    stopBtn.addEventListener('click', function() {
+        fetch('/stop_detection')
+            .then(response => response.json())
+            .then(data => {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                
+                if (updateInterval) {
+                    clearInterval(updateInterval);
+                }
+                
+                // Reset counters
+                totalFaces.textContent = '0';
+                authorizedCount.textContent = '0';
+                unauthorizedCount.textContent = '0';
+                systemStatus.textContent = 'Stopped';
+                
+                detectionResults.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No active detection</td></tr>';
+                addActivityLog('🛑 Detection system stopped', 'info');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addActivityLog('❌ Error stopping detection', 'danger');
+            });
+    });
+
+    clearBtn.addEventListener('click', function() {
+        // Clear performance chart
+        performanceChart.data.labels = [];
+        performanceChart.data.datasets[0].data = [];
+        performanceChart.update();
+        
+        // Clear activity log
+        activityLog.innerHTML = '<p class="text-muted">No recent activity</p>';
+        
+        addActivityLog('🗑️ Dashboard data cleared', 'info');
+    });
+
+    // Initial update
+    updateDashboard();
+});
+</script>
+{% endblock %}

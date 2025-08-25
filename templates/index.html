@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Face Detection System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12 text-center">
+            <h1 class="display-4 mb-4">
+                <i class="fas fa-video"></i> Real-time Face Detection System
+            </h1>
+            <p class="lead">Advanced AI-powered face detection and recognition using MTCNN and OpenCV</p>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-camera"></i> Live Video Feed</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="video-container">
+                        <img id="video-feed" src="" alt="Video feed will appear here" class="img-fluid" style="display: none; max-width: 100%; height: auto;">
+                        <div id="video-placeholder" class="bg-light p-5 rounded">
+                            <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Click "Start Detection" to begin</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button id="start-btn" class="btn btn-success">
+                            <i class="fas fa-play"></i> Start Detection
+                        </button>
+                        <button id="stop-btn" class="btn btn-danger" disabled>
+                            <i class="fas fa-stop"></i> Stop Detection
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-info">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Detection Status</h5>
+                </div>
+                <div class="card-body">
+                    <div id="status-info">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h3 id="faces-count" class="text-primary">0</h3>
+                                    <small class="text-muted">Faces Detected</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <h3 id="status-indicator" class="text-secondary">
+                                        <i class="fas fa-circle"></i>
+                                    </h3>
+                                    <small class="text-muted">Status</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-plus"></i> Add Authorized User</h5>
+                </div>
+                <div class="card-body">
+                    <form id="add-user-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="user-name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="user-name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-image" class="form-label">Photo</label>
+                            <input type="file" class="form-control" id="user-image" name="image" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-plus"></i> Add User
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> Features</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="fas fa-search fa-2x text-primary mb-2"></i>
+                            <h6>Real-time Detection</h6>
+                            <p class="text-muted">Advanced MTCNN algorithm for accurate face detection</p>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                            <h6>Recognition System</h6>
+                            <p class="text-muted">Identify authorized vs unauthorized individuals</p>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                            <h6>Performance Optimized</h6>
+                            <p class="text-muted">Efficient processing for real-time applications</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert container -->
+<div id="alert-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const videoFeed = document.getElementById('video-feed');
+    const videoPlaceholder = document.getElementById('video-placeholder');
+    const facesCount = document.getElementById('faces-count');
+    const statusIndicator = document.getElementById('status-indicator');
+    const addUserForm = document.getElementById('add-user-form');
+
+    let statusUpdateInterval;
+
+    function showAlert(message, type = 'info') {
+        const alertContainer = document.getElementById('alert-container');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        alertContainer.appendChild(alertDiv);
+
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    function updateStatus() {
+        fetch('/detection_status')
+            .then(response => response.json())
+            .then(data => {
+                facesCount.textContent = data.faces_detected;
+                
+                if (data.active) {
+                    statusIndicator.innerHTML = '<i class="fas fa-circle text-success"></i>';
+                } else {
+                    statusIndicator.innerHTML = '<i class="fas fa-circle text-secondary"></i>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching status:', error);
+            });
+    }
+
+    startBtn.addEventListener('click', function() {
+        fetch('/start_detection')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    videoFeed.src = '/video_feed';
+                    videoFeed.style.display = 'block';
+                    videoPlaceholder.style.display = 'none';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    
+                    statusUpdateInterval = setInterval(updateStatus, 1000);
+                    showAlert(data.message, 'success');
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                showAlert('Error starting detection', 'danger');
+                console.error('Error:', error);
+            });
+    });
+
+    stopBtn.addEventListener('click', function() {
+        fetch('/stop_detection')
+            .then(response => response.json())
+            .then(data => {
+                videoFeed.style.display = 'none';
+                videoPlaceholder.style.display = 'block';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                
+                if (statusUpdateInterval) {
+                    clearInterval(statusUpdateInterval);
+                }
+                
+                facesCount.textContent = '0';
+                statusIndicator.innerHTML = '<i class="fas fa-circle text-secondary"></i>';
+                
+                showAlert(data.message, 'info');
+            })
+            .catch(error => {
+                showAlert('Error stopping detection', 'danger');
+                console.error('Error:', error);
+            });
+    });
+
+    addUserForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(addUserForm);
+        
+        fetch('/add_user', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showAlert(data.message, 'success');
+                addUserForm.reset();
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('Error adding user', 'danger');
+            console.error('Error:', error);
+        });
+    });
+});
+</script>
+{% endblock %}
